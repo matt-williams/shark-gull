@@ -1,0 +1,3 @@
+[submodule "wireshark"]
+	path = wireshark
+	url = https://code.wireshark.org/review/wireshark
