@@ -6,4 +6,4 @@ cp -R wireshark/diameter build/dictionary
 egrep -v '<!ENTITY Custom[ \t]*SYSTEM "Custom.xml">' wireshark/diameter/dictionary.xml |
 egrep -v '&Custom;' > build/dictionary/dictionary.xml
 # Run the XSLT over Wireshark's dictionary
-xsltproc --xinclude dictionary2seagull.xsl build/dictionary/dictionary.xml > seagull.dictionary.xml
+xsltproc --xinclude dictionary2seagull.xsl build/dictionary/dictionary.xml > dictionary.seagull.xml
