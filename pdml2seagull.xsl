@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:str="http://exslt.org/strings" extension-element-prefixes="str">
 <xsl:output method="xml" version="1.0" encoding="ISO-8859-1" indent="yes"/>
 
 <xsl:key name="ips" match="/pdml/packet/proto[@name = 'ip']/field[@name = 'ip.host']" use="@show" />
@@ -26,23 +26,45 @@
           <xsl:choose>
             <xsl:when test="../proto[@name = 'ip']/field[@name = 'ip.src' and @show = $ip]">
               <send channel="peer-{../proto[@name = 'ip']/field[@name = 'ip.dst']/@show}">
-                <action>
-                  <inc-counter name="HbH-counter" />
-                  <set-value name="HbH-id" format="$(HbH-counter)" />
-                  <inc-counter name="EtE-counter" />
-                  <set-value name="EtE-id" format="$(EtE-counter)" />
-                  <xsl:if test="field[@name = 'diameter.avp']/field[@name = 'diameter.Session-Id']">
-                    <inc-counter name="session-counter"/>
-                    <set-value name="Session-Id" format="{field[@name = 'diameter.avp']/field[@name = 'diameter.Session-Id']/@show};$(session-counter)" />
-                  </xsl:if>
-                </action>
-
+                <xsl:choose>
+                  <xsl:when test="field[@name = 'diameter.flags']/field[@name = 'diameter.flags.request']/@show = '1'">
+                    <action>
+                      <inc-counter name="HbH-counter" />
+                      <set-value name="HbH-id" format="$(HbH-counter)" />
+                      <inc-counter name="EtE-counter" />
+                      <set-value name="EtE-id" format="$(EtE-counter)" />
+                      <xsl:if test="field[@name = 'diameter.avp']/field[@name = 'diameter.Session-Id']">
+                        <inc-counter name="session-counter"/>
+                        <xsl:variable name="session_id" select="field[@name = 'diameter.avp']/field[@name = 'diameter.Session-Id']/@show" />
+                        <set-value name="Session-Id" format="{substring($session_id, 0, string-length($session_id) - string-length(str:split($session_id, ';')[count(str:split($session_id, ';'))]))};$(session-counter)" />
+                      </xsl:if>
+                    </action>
+                  </xsl:when>
+                  <xsl:when test="field[@name = 'diameter.flags']/field[@name = 'diameter.flags.request']/@show = '0'">
+                    <action>
+                      <store name="HbH" entity="HbH-id"></store>
+                      <store name="E2E" entity="EtE-id"></store>
+                      <xsl:if test="field[@name = 'diameter.avp']/field[@name = 'diameter.Session-Id']">
+                        <store name="Session" entity="Session-Id"></store>
+                      </xsl:if>
+                    </action>
+                  </xsl:when>
+                </xsl:choose>
                 <xsl:call-template name="command" />
               </send>
             </xsl:when>
             <xsl:when test="../proto[@name = 'ip']/field[@name = 'ip.dst' and @show = $ip]">
               <recv channel="peer-{../proto[@name = 'ip']/field[@name = 'ip.src']/@show}">
                 <xsl:call-template name="command" />
+                <xsl:if test="field[@name = 'diameter.flags']/field[@name = 'diameter.flags.request']/@show = '1'">
+                  <action>
+                    <store name="HbH" entity="HbH-id"></store>
+                    <store name="E2E" entity="EtE-id"></store>
+                    <xsl:if test="field[@name = 'diameter.avp']/field[@name = 'diameter.Session-Id']">
+                      <store name="Session" entity="Session-Id"></store>
+                    </xsl:if>
+                  </action>
+                </xsl:if>
               </recv>
             </xsl:when>
           </xsl:choose>
